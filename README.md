@@ -30,7 +30,7 @@ QueueConsumer consumer = new QueueBuilder().connectTo("user", "pass", "localhost
 			.fromExchange("data-exchange").build();
 ```	
 
-Then somewhere in your code you can do something like this to receive messages:
+Then somewhere in your code you can do something like this to **receive messages**:
 
 ```java
 public class XYZClass {
