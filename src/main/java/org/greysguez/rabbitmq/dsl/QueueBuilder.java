@@ -7,32 +7,6 @@ import com.rabbitmq.client.AMQP.BasicProperties;
  */
 public class QueueBuilder {
 
-	public class ConsumerBuilder {
-
-		private Consumer consumer;
-
-		public ConsumerBuilder(Consumer consumer) {
-			this.consumer = consumer;
-		}
-		
-		public QueueConsumer build(){
-			QueueConsumer rmqc = new QueueConsumer();
-			rmqc.declare(
-					consumer.base, 
-					consumer.queueName, 
-					consumer.exchangeName, 
-					consumer.exchangeType, 
-					consumer.bindingKeys, 
-					consumer.durable,
-					consumer.queueMaxLength,
-					consumer.queueMaxLengthBytes,
-					consumer.queueMsgTTL,
-					consumer.autoAck
-			);
-			return rmqc;
-		}
-	}
-	
 	public class PublisherBuilder {
 
 		private Publisher publisher;
@@ -53,37 +27,114 @@ public class QueueBuilder {
 		}
 	}
 	
-	public class Consumer {
+	public class Queue {
 
-		protected boolean durable = false;
+		protected boolean queueAutoDelete = false;
+		protected boolean queueDurable = false;
+		protected boolean queueExclusive = false;
+		
 		protected String queueName = "queue";
 		protected long queueMaxLength = -1; // not set
 		protected long queueMaxLengthBytes = -1; // not set
 		protected long queueMsgTTL = -1; // not set
-		protected boolean autoAck = true;
-		protected Base base;
-		protected String[] bindingKeys;
-		protected String exchangeName = "#";
-		protected String exchangeType = "topic";
 		
-		public Consumer(String queueName, Base base) {
+		protected Consumer consumer;
+	
+		public Queue(Consumer consumer, String queueName) {
+			this.consumer = consumer;
 			this.queueName = queueName;
-			this.base = base;
 		}
-
-		public Consumer queueMaxLength(long queueMaxLength){
+		
+		public Queue queueMaxLength(long queueMaxLength){
 			this.queueMaxLength = queueMaxLength;
 			return this;
 		}
 		
-		public Consumer queueMaxLengthBytes(long queueMaxLengthBytes){
+		public Queue queueMaxLengthBytes(long queueMaxLengthBytes){
 			this.queueMaxLengthBytes = queueMaxLengthBytes;
 			return this;
 		}
 
-		public Consumer queueMsgTTL(long queueMsgTTL){
+		public Queue queueMsgTTL(long queueMsgTTL){
 			this.queueMsgTTL = queueMsgTTL;
 			return this;
+		}
+		
+		public Queue queueDurable(){
+			this.queueDurable = true;
+			return this;
+		}
+
+		public Queue queueExclusive(){
+			this.queueExclusive = true;
+			return this;
+		}
+		
+		public Queue queueAutoDelete(){
+			this.queueAutoDelete = true;
+			return this;
+		}
+
+		public Exchange topicExchange(String exchangeName, String... bindingKeys){
+			return new Exchange(this, exchangeName, "topic", bindingKeys);
+		}
+		
+		public Exchange fanoutExchange(String exchangeName){
+			return new Exchange(this, exchangeName, "fanout", new String[]{""});
+		}
+		
+		public Exchange directExchange(String exchangeName, String... bindingKeys){
+			return new Exchange(this, exchangeName, "direct", bindingKeys);
+		}
+	}
+	
+	public class Exchange {
+		
+		protected String[] bindingKeys;
+		protected String exchangeName = "#";
+		protected String exchangeType = "topic";
+		protected boolean durable = false;
+		private Queue queue;
+		
+		public Exchange(Queue queue, String exchangeName, String exchangeType, String[] bindingKeys) {
+			this.queue = queue;
+			this.exchangeName = exchangeName;
+			this.exchangeType = exchangeType;
+			this.bindingKeys = bindingKeys;
+		}
+		
+		public Exchange durable(){
+			this.durable = true;
+			return this;
+		}
+		
+		public QueueConsumer build(){
+			QueueConsumer rmqc = new QueueConsumer();
+			rmqc.declare(
+					queue.consumer.base, 
+					queue.queueName, 
+					this.exchangeName, 
+					this.exchangeType, 
+					this.bindingKeys, 
+					this.durable,
+					queue.queueMaxLength,
+					queue.queueMaxLengthBytes,
+					queue.queueMsgTTL,
+					queue.consumer.autoAck,
+					queue.queueAutoDelete,
+					queue.queueDurable,
+					queue.queueExclusive);
+			return rmqc;
+		}
+	}
+	
+	public class Consumer {
+
+		protected boolean autoAck = true;
+		protected Base base;
+		
+		public Consumer(Base base) {
+			this.base = base;
 		}
 		
 		public Consumer autoAck(boolean autoAck){
@@ -91,35 +142,10 @@ public class QueueBuilder {
 			return this;
 		}
 		
-		public Consumer fromTopic(String... bindingKeys){
-			this.bindingKeys = bindingKeys;
-			this.exchangeType = "topic";
-			return this;
+		public Queue fromQueue(String queueName){
+			return new Queue(this, queueName);
 		}
 		
-		public Consumer directlyFrom(String... bindingKeys){
-			this.bindingKeys = bindingKeys;
-			this.exchangeType = "direct";
-			return this;
-		}
-		
-		public Consumer fanout(){
-			this.bindingKeys = new String[]{""};
-			this.exchangeType = "fanout";
-			return this;
-		}
-		
-		public ConsumerBuilder fromDurableExchange(String exchangeName){
-			this.exchangeName = exchangeName;
-			this.durable = true;
-			return new ConsumerBuilder(this);
-		}
-		
-		public ConsumerBuilder fromExchange(String exchangeName){
-			this.exchangeName = exchangeName;
-			this.durable = false;
-			return new ConsumerBuilder(this);
-		}
 	}
 	
 	public class Publisher {
@@ -177,8 +203,8 @@ public class QueueBuilder {
 			return new Publisher(exchange, true, this);
 		}
 		
-		public Consumer consumeFromQueue(String queueName){
-			return new Consumer(queueName, this);
+		public Consumer consume(){
+			return new Consumer(this);
 		}
 		
 		public Base withProperties(BasicProperties properties){

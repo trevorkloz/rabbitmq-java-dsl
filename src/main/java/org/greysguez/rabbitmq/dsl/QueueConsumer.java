@@ -20,15 +20,12 @@ public class QueueConsumer {
 	private Channel channel;
 	private QueueingConsumer consumer;
 	private Connection connection;
-    
+
 	private String queueName;
-
 	private boolean autoAck = true;
-
-    private static final boolean QUEUE_AUTO_DELETE = false;
-    private static final boolean QUEUE_EXCLUSIVE = false;
-    private static final boolean QUEUE_DURABLE = false;
-
+    private boolean queueAutoDelete = false;
+    private boolean queueDurable = false;
+    private boolean queueExclusive = false;
 	private long queueMaxLength;
 	private long queueMaxLengthBytes;
 	private long queueMsgTTL;
@@ -40,7 +37,8 @@ public class QueueConsumer {
     
 	/* package */ void declare(Base base,
 			String queueName, String exchangeName, String exchangeType, String[] bindingKeys, boolean exchangeDurable,
-			long queueMaxLength, long queueMaxLengthBytes, long queueMsgTTL, boolean autoAck){
+			long queueMaxLength, long queueMaxLengthBytes, long queueMsgTTL, boolean autoAck,
+			boolean queueAutoDelete, boolean queueDurable, boolean queueExclusive){
     	
 		this.autoAck = autoAck;
 		
@@ -151,9 +149,10 @@ public class QueueConsumer {
         	
             channel.queueDeclare(
             		queueName, 
-            		QUEUE_DURABLE, 
-            		QUEUE_EXCLUSIVE, 
-            		QUEUE_AUTO_DELETE, arguments);
+            		queueDurable, 
+            		queueExclusive, 
+            		queueAutoDelete, arguments);
+            
         } catch (IOException e) {
             throw new QueueException("Could not declare queue:", e);
         }
