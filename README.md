@@ -24,10 +24,9 @@ Build a **consumer**:
 
 ```java
 QueueConsumer consumer = new QueueBuilder().connectTo("user", "pass", "localhost", "5672")
-			.consumeFromQueue("data-queue")
-			.fromTopic("topic-name")
-			.autoAck(true)
-			.fromExchange("data-exchange").build();
+			.consume().fromQueue("data-queue")
+			.topicExchange("topic-name", "some.binding.name")
+			.durable().build();
 ```	
 
 Then somewhere in your code you can do something like this to **receive messages**:
